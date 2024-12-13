@@ -32,6 +32,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.google.gson)
     implementation(libs.okhttp)
     implementation(libs.androidx.work.runtime)
     implementation(libs.appcompat)
