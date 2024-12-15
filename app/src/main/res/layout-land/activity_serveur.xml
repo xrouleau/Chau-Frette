@@ -6,49 +6,46 @@
     android:layout_height="match_parent">
 
     <EditText
-        android:id="@+id/editTextIP2"
+        android:id="@+id/editTextIP"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:ems="10"
         android:hint="Adresse IP"
         android:inputType="text"
-        app:layout_constraintBottom_toBottomOf="@+id/editTextNumberPort2"
-        app:layout_constraintEnd_toStartOf="@+id/editTextNumberPort2"
-        app:layout_constraintHorizontal_bias="0.65"
+        app:layout_constraintEnd_toStartOf="@+id/editTextPort"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/editTextNumberPort2"
-        app:layout_constraintVertical_bias="0.0" />
+        tools:layout_editor_absoluteY="226dp" />
 
     <TextView
-        android:id="@+id/textViewPort2"
+        android:id="@+id/textViewPort"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Port du serveur"
-        app:layout_constraintBottom_toTopOf="@+id/editTextNumberPort2"
-        app:layout_constraintEnd_toEndOf="@+id/editTextNumberPort2"
-        app:layout_constraintStart_toStartOf="@+id/editTextNumberPort2" />
+        app:layout_constraintBottom_toTopOf="@+id/editTextPort"
+        app:layout_constraintEnd_toEndOf="@+id/editTextPort"
+        app:layout_constraintStart_toStartOf="@+id/editTextPort" />
 
     <Button
-        android:id="@+id/buttonRetour2"
+        android:id="@+id/buttonRetour"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="30dp"
         android:layout_marginEnd="15dp"
-        android:text="Button"
+        android:text="Retour"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/textViewIP2"
+        android:id="@+id/textViewIP"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Adresse IP du serveur"
-        app:layout_constraintBottom_toTopOf="@+id/editTextIP2"
-        app:layout_constraintEnd_toEndOf="@+id/editTextIP2"
-        app:layout_constraintStart_toStartOf="@+id/editTextIP2" />
+        app:layout_constraintBottom_toTopOf="@+id/editTextIP"
+        app:layout_constraintEnd_toEndOf="@+id/editTextIP"
+        app:layout_constraintStart_toStartOf="@+id/editTextIP" />
 
     <TextView
-        android:id="@+id/textViewtitre2"
+        android:id="@+id/textViewtitre"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Paramètres du serveur"
@@ -61,16 +58,15 @@
         app:layout_constraintVertical_bias="0.262" />
 
     <EditText
-        android:id="@+id/editTextNumberPort2"
+        android:id="@+id/editTextPort"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="96dp"
-        android:layout_marginEnd="124dp"
+        android:layout_marginEnd="104dp"
         android:ems="10"
         android:hint="Port"
-        android:inputType="number"
+        android:inputType="text"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textViewtitre2" />
+        app:layout_constraintTop_toTopOf="@+id/editTextIP" />
 
     <Button
         android:id="@+id/buttonSauvegarder"
@@ -80,5 +76,5 @@
         android:text="Sauvegarder"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/editTextIP2" />
+        app:layout_constraintTop_toBottomOf="@+id/editTextIP" />
 </androidx.constraintlayout.widget.ConstraintLayout>

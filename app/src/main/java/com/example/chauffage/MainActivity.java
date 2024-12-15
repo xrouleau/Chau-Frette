@@ -1,75 +1,200 @@
 package com.example.chauffage;
 
+import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.annotation.Nullable;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts.RequestPermission;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.BufferedInputStream;
-import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Date;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
-
+    private final String NOM_WORKER = "ChauFretteWorker";
     private Handler handler;
     private SharedPreferences preferences;
+    private boolean shouldRefresh = true;
 
+    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
         this.handler = new Handler(Looper.getMainLooper());
         this.preferences = getSharedPreferences("data", MODE_PRIVATE);
 
-        getData();
-        postData(1, 0, 35);
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            // Si la permission n'est pas accordée, demander la permission
+            requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS);
+        } else {
+            // Si la permission est déjà accordée, vous pouvez démarrer le worker
+            PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(ChauffageWorker.class,
+                    15,
+                    TimeUnit.MINUTES).build();
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(NOM_WORKER, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, request);
+        }
 
-        PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(ChauffageWorker.class,
-                PeriodicWorkRequest.MIN_PERIODIC_INTERVAL_MILLIS,
-                TimeUnit.MILLISECONDS).build();
-        WorkManager.getInstance(this).enqueue(request);
+
+        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sNotif = findViewById(R.id.switchNotif);
+        sNotif.setChecked(preferences.getBoolean("notifications", false));
+        sNotif.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putBoolean("notifications", sNotif.isChecked());
+                editor.apply();
+            }
+        });
+
+        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sChauffage = findViewById(R.id.switchChauffage);
+        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sAC = findViewById(R.id.switchAC);
+        sChauffage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (sChauffage.isChecked()) {
+                    sAC.setChecked(false);
+                }
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putInt("chauffage", sChauffage.isChecked() ? 1 : 0);
+                editor.putInt("ac", 0);
+                if (sAC.isChecked() == sChauffage.isChecked()) {
+                    editor.putInt("intensite", 0);
+                }
+                editor.apply();
+                postData();
+            }
+        });
+
+        sAC.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (sAC.isChecked()) {
+                    sChauffage.setChecked(false);
+                }
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putInt("ac", sAC.isChecked() ? 1 : 0);
+                editor.putInt("chauffage", 0);
+                if (sAC.isChecked() == sChauffage.isChecked()) {
+                    editor.putInt("intensite", 0);
+                }
+                editor.apply();
+                postData();
+            }
+        });
+
+        Button enregistrer = findViewById(R.id.buttonIntensite);
+        enregistrer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                try {
+                    EditText editTextIntensite = findViewById(R.id.editTextNumber);
+                    Integer intensite = Integer.valueOf(editTextIntensite.getText().toString());
+                    if (intensite < 0 || intensite > 100) {
+                        throw new Exception();
+                    }
+                    if (sAC.isChecked() != sChauffage.isChecked()) {
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putInt("chauffage", 0);
+                        editor.apply();
+                    } else {
+                        Toast.makeText(getApplicationContext(), "Il faut d'abord activer un mode", Toast.LENGTH_SHORT).show();
+                    }
+                    postData();
+                } catch (NumberFormatException e) {
+                    Toast.makeText(getApplicationContext(), "Doit être un nombre", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    Toast.makeText(getApplicationContext(), "Doit être entre 0 et 100 inclusivement", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        Button serveur = findViewById(R.id.buttonServeur);
+        serveur.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                serveurActivity();
+            }
+        });
+    }
+
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    // Si la permission est accordée, démarrer le worker
+                    PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(ChauffageWorker.class,
+                            PeriodicWorkRequest.MIN_PERIODIC_INTERVAL_MILLIS,
+                            TimeUnit.MILLISECONDS).build();
+                    WorkManager.getInstance(this).enqueue(request);
+                } else {
+                    // Si la permission est refusée, afficher un message
+                    Toast.makeText(this, "Permission denied. Cannot send notifications.", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refresh();
+        shouldRefresh = true;
     }
 
     private void getData () {
         Thread thread = new Thread(new Runnable() {
+            @SuppressLint("UseSwitchCompatOrMaterialCode")
             @Override
             public void run() {
-                String ip = "10.4.173.33";
-                String port = "8080";
 
-                // Obtenir l'information de l'objet au demarrage de l'application
+                String ip = preferences.getString("ip", "");
+                String port = preferences.getString("port", "");
+
+                // Obtenir l'information de l'objet
                 StringBuilder reponse = new StringBuilder();
-                Integer code;
                 try {
-                    URL url = new URL("Http://" + ip + ":" + port);
+                    // Établir la connexion
+                    URL url = new URL("Http://" + ip + ":" + port + "/get");
                     HttpURLConnection connexion = (HttpURLConnection) url.openConnection();
+
+                    // Au cas ou la connection échoue ou la requète
+                    connexion.setConnectTimeout(2000);
+                    connexion.setReadTimeout(2000);
+                    if (connexion.getResponseCode() >= 300) {
+                        throw new IOException();
+                    }
+
+                    // Si la connexion réussi lire les données reçues
                     InputStream is = new BufferedInputStream(connexion.getInputStream());
                     byte[] donnees = new byte[1024];
                     int bytesRead = 0;
@@ -77,72 +202,137 @@ public class MainActivity extends AppCompatActivity {
                         reponse.append(new String(donnees, 0, bytesRead));
                     }
                     connexion.disconnect();
-                    code = connexion.getResponseCode();
                 } catch (IOException e) {
-                    Log.e("errrrrrrrrrrrrrrrrrrrrreur", e.toString());
-                    throw new RuntimeException(e);
+                    // Si la connexion échoue lancer l'activité serveur
+                    handler.post(() -> Toast.makeText(getApplicationContext(), "Connexion au serveur impossible", Toast.LENGTH_LONG).show());
+                    handler.post(() -> serveurActivity());
                 }
+
+                // Obtenir les valeurs du Json
                 String text = reponse.toString();
-                Log.i("aaaaaaaaaaaaaaaaaa", text);
                 List<Integer> valeurs = new ArrayList<>();
                 for (int i = 0; i < text.length(); i++) {
                     if (text.charAt(i) == ":".toCharArray()[0]) {
                         StringBuilder sValeur = new StringBuilder();
                         for (int n = i+2; n < text.length(); n++) {
-                            if (text.charAt(n) == ",".toCharArray()[0] || text.charAt(n) == "}".toCharArray()[0]) {
-                                break;
-                            } else {
+                            if (Character.isDigit(text.charAt(n))) {
                                 sValeur.append(text.charAt(n));
+                            } else {
+                                break;
                             }
                         }
-                        valeurs.add(Integer.valueOf(sValeur.toString()));
+                        try {
+                            valeurs.add(Integer.valueOf(sValeur.toString()));
+                        } catch (NumberFormatException e) {
+                            Log.e("ERREUR", "Pas un int");
+                        }
                     }
                 }
-                // Print current character
-                for (Integer i : valeurs) {
-                    Log.i("aaaaaaaaaaaaaaaaaa", i.toString());
-                }
-                TextView textView = findViewById(R.id.textViewIntensiteValeur);
-                handler.post(() -> textView.setText("2"));
 
-                if (code == 200 && valeurs.size() == 3) {
+                // Si toutes les valeurs ont bien été trouvé
+                if (valeurs.size() == 3) {
+                    // Stock les valeurs dans les shared prefs pour y avoir accès dans toutes les activités
                     SharedPreferences.Editor editor = preferences.edit();
                     editor.putInt("chauffage", valeurs.get(0));
                     editor.putInt("ac", valeurs.get(1));
-                    editor.putFloat("chauffage", valeurs.get(2));
+                    editor.putInt("intensite", valeurs.get(2));
+                    editor.apply();
+
+                    // Afficher les valeurs sur l'application
+                    Switch chauffage = findViewById(R.id.switchChauffage);
+                    Switch ac = findViewById(R.id.switchAC);
+                    TextView affichageIntensite = findViewById(R.id.textViewIntensiteValeur);
+                    try {
+                        handler.post(() -> chauffage.setChecked(valeurs.get(0) == 1));
+                        handler.post(() -> ac.setChecked(valeurs.get(1) == 1));
+                        handler.post(() -> affichageIntensite.setText(String.valueOf(valeurs.get(2))));
+                    } catch (NullPointerException e) {
+                        Log.w("Attention", "Pu de le meme activity");
+                    }
                 }
             }
         });
         thread.start();
     }
 
-    private void postData(Integer chauffage, Integer ac, Integer intensite){
+    private void postData(){
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                String ip = "10.4.173.33";
-                String port = "8080";
+                String ip = preferences.getString("ip", "");
+                String port = preferences.getString("port", "");
 
                 try {
-                    URL url = new URL("Http://" + ip + ":" + port);
+                    // Établir la connexion
+                    URL url = new URL("Http://" + ip + ":" + port + "/post");
                     HttpURLConnection connexion = (HttpURLConnection) url.openConnection();
+
+                    // Au cas ou la connection échoue ou la requète
+                    connexion.setConnectTimeout(2000);
+                    connexion.setReadTimeout(2000);
+                    if (connexion.getResponseCode() >= 300) {
+                        throw new IOException();
+                    }
+
+                    // Si la connexion réussi envoyer la requête
                     connexion.setRequestMethod("POST");
                     connexion.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
                     connexion.setRequestProperty("Accept", "html/text");
                     connexion.setDoOutput(true);
                     connexion.setDoInput(true);
                     DataOutputStream os = new DataOutputStream(connexion.getOutputStream());
-                    os.writeBytes("{\"chauffage\": " + chauffage + ", \"ac\": " + ac + ", \"intensite\": " + intensite + "}");
+                    os.writeBytes("{\"chauffage\": " + preferences.getInt("chauffage", 0) + ", \"ac\": " + preferences.getInt("ac", 0) + ", \"intensite\": " + preferences.getInt("intensite", 0) + "}");
                     os.flush();
                     os.close();
-                    Log.i("bbbbbbbbbbbbbb", String.valueOf(connexion.getResponseCode()));
-                    Log.i("bbbbbbbbbbbbbb", connexion.getResponseMessage());
-
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    // Si la connexion échoue lancer l'activité serveur
+                    handler.post(() -> Toast.makeText(getApplicationContext(), "Connexion au serveur impossible", Toast.LENGTH_LONG).show());
+                    handler.post(() -> serveurActivity());
                 }
             }
         });
         thread.start();
+    }
+
+    private void refresh() {
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (shouldRefresh) {
+                    getData();
+                    Log.i("Refresh", "aaaaaaaaaaaaaaa");
+                    try {
+                        Thread.sleep(10000);
+                    } catch (InterruptedException e) {
+                        Log.e("ERREUR", "Thread.sleep");
+                    }
+                }
+
+            }
+        });
+        thread.start();
+    }
+
+    private void serveurActivity() {
+        Intent intent = new Intent(MainActivity.this, ServeurActivity.class);
+        startActivity(intent);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        shouldRefresh = false;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        shouldRefresh = false;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        shouldRefresh = false;
     }
 }

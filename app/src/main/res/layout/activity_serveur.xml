@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="30dp"
         android:layout_marginEnd="15dp"
-        android:text="Button"
+        android:text="Retour"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -23,7 +23,6 @@
         android:textAppearance="@style/TextAppearance.AppCompat.Large"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.262" />
@@ -36,19 +35,9 @@
         android:ems="10"
         android:hint="Adresse IP"
         android:inputType="text"
-        app:layout_constraintTop_toBottomOf="@+id/textView"
-        tools:layout_editor_absoluteX="100dp" />
-
-    <EditText
-        android:id="@+id/editTextNumberPort"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="92dp"
-        android:ems="10"
-        android:hint="Port"
-        android:inputType="number"
-        app:layout_constraintTop_toBottomOf="@+id/editTextIP"
-        tools:layout_editor_absoluteX="100dp" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView" />
 
     <TextView
         android:id="@+id/textViewIP"
@@ -65,7 +54,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Port du serveur"
-        app:layout_constraintBottom_toTopOf="@+id/editTextNumberPort"
+        app:layout_constraintBottom_toTopOf="@+id/editTextPort"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
@@ -73,9 +62,21 @@
         android:id="@+id/buttonSauvegarder"
         android:layout_width="130dp"
         android:layout_height="47dp"
-        android:layout_marginTop="36dp"
+        android:layout_marginTop="88dp"
         android:text="Sauvegarder"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/editTextNumberPort" />
+        app:layout_constraintTop_toBottomOf="@+id/editTextPort" />
+
+    <EditText
+        android:id="@+id/editTextPort"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="72dp"
+        android:ems="10"
+        android:hint="Port"
+        android:inputType="text"
+        app:layout_constraintEnd_toEndOf="@+id/editTextIP"
+        app:layout_constraintStart_toStartOf="@+id/editTextIP"
+        app:layout_constraintTop_toBottomOf="@+id/editTextIP" />
 </androidx.constraintlayout.widget.ConstraintLayout>

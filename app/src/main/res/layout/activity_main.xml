@@ -8,7 +8,7 @@
     tools:context=".MainActivity">
 
     <Button
-        android:id="@+id/btnServeur"
+        android:id="@+id/buttonServeur"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
@@ -18,14 +18,14 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/btnMinuterie"
+        android:id="@+id/buttonMinuterie"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="15dp"
         android:text="Minuterie"
-        app:layout_constraintBottom_toBottomOf="@+id/btnServeur"
+        app:layout_constraintBottom_toBottomOf="@+id/buttonServeur"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/btnServeur" />
+        app:layout_constraintTop_toTopOf="@+id/buttonServeur" />
 
     <TextView
         android:id="@+id/titre"
@@ -100,10 +100,11 @@
         android:layout_width="135dp"
         android:layout_height="46dp"
         android:text="Notifications"
-        app:layout_constraintBottom_toBottomOf="@+id/btnMinuterie"
-        app:layout_constraintEnd_toStartOf="@+id/btnMinuterie"
-        app:layout_constraintStart_toEndOf="@+id/btnServeur"
-        app:layout_constraintTop_toTopOf="@+id/btnMinuterie" />
+        app:layout_constraintBottom_toBottomOf="@+id/buttonMinuterie"
+        app:layout_constraintEnd_toStartOf="@+id/buttonMinuterie"
+        app:layout_constraintStart_toEndOf="@+id/buttonServeur"
+        app:layout_constraintTop_toTopOf="@+id/buttonMinuterie"
+        tools:ignore="UseSwitchCompatOrMaterialXml" />
 
     <TextView
         android:id="@+id/textViewIntensiteValeur"

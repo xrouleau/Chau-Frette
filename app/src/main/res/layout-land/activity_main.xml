@@ -6,7 +6,7 @@
     android:layout_height="match_parent">
 
     <Button
-        android:id="@+id/btnServeur2"
+        android:id="@+id/btnServeur"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="30dp"
@@ -16,7 +16,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/titre2"
+        android:id="@+id/titre"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Chau-frette"
@@ -29,80 +29,80 @@
         app:layout_constraintVertical_bias="0.217" />
 
     <EditText
-        android:id="@+id/editTextNumber2"
+        android:id="@+id/editTextNumber"
         android:layout_width="113dp"
         android:layout_height="63dp"
         android:layout_marginTop="100dp"
         android:ems="10"
         android:inputType="number"
-        app:layout_constraintStart_toEndOf="@+id/titre2"
-        app:layout_constraintTop_toBottomOf="@+id/titre2" />
+        app:layout_constraintStart_toEndOf="@+id/titre"
+        app:layout_constraintTop_toBottomOf="@+id/titre" />
 
     <Switch
-        android:id="@+id/switchChauffage2"
+        android:id="@+id/switchChauffage"
         android:layout_width="134dp"
         android:layout_height="54dp"
         android:layout_marginTop="48dp"
         android:text="Chauffage"
-        app:layout_constraintEnd_toStartOf="@+id/titre2"
-        app:layout_constraintTop_toBottomOf="@+id/titre2"
+        app:layout_constraintEnd_toStartOf="@+id/titre"
+        app:layout_constraintTop_toBottomOf="@+id/titre"
         tools:ignore="UseSwitchCompatOrMaterialXml" />
 
     <Switch
-        android:id="@+id/switchAC2"
+        android:id="@+id/switchAC"
         android:layout_width="167dp"
         android:layout_height="66dp"
         android:layout_marginTop="48dp"
         android:text="Air Climatisée"
-        app:layout_constraintEnd_toEndOf="@+id/switchChauffage2"
-        app:layout_constraintTop_toBottomOf="@+id/switchChauffage2"
+        app:layout_constraintEnd_toEndOf="@+id/switchChauffage"
+        app:layout_constraintTop_toBottomOf="@+id/switchChauffage"
         tools:ignore="UseSwitchCompatOrMaterialXml" />
 
     <TextView
-        android:id="@+id/textViewIntensite2"
+        android:id="@+id/textViewIntensite"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Intensité"
-        app:layout_constraintBottom_toTopOf="@+id/editTextNumber2"
-        app:layout_constraintEnd_toEndOf="@+id/textViewIntensiteValeur2"
-        app:layout_constraintStart_toStartOf="@+id/editTextNumber2" />
+        app:layout_constraintBottom_toTopOf="@+id/editTextNumber"
+        app:layout_constraintEnd_toEndOf="@+id/textViewIntensiteValeur"
+        app:layout_constraintStart_toStartOf="@+id/editTextNumber" />
 
     <Button
-        android:id="@+id/btnMinuterie2"
+        android:id="@+id/btnMinuterie"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="30dp"
         android:text="Minuterie"
-        app:layout_constraintBottom_toBottomOf="@+id/btnServeur2"
+        app:layout_constraintBottom_toBottomOf="@+id/btnServeur"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/btnServeur2" />
+        app:layout_constraintTop_toTopOf="@+id/btnServeur" />
 
     <TextView
-        android:id="@+id/textViewIntensiteValeur2"
+        android:id="@+id/textViewIntensiteValeur"
         android:layout_width="113dp"
         android:layout_height="36dp"
         android:layout_marginStart="8dp"
         android:text="0"
         android:textAlignment="center"
-        app:layout_constraintBottom_toBottomOf="@+id/editTextNumber2"
-        app:layout_constraintStart_toEndOf="@+id/editTextNumber2" />
+        app:layout_constraintBottom_toBottomOf="@+id/editTextNumber"
+        app:layout_constraintStart_toEndOf="@+id/editTextNumber" />
 
     <Button
-        android:id="@+id/buttonIntensite2"
+        android:id="@+id/buttonIntensite"
         android:layout_width="134dp"
         android:layout_height="44dp"
         android:text="Sauvegarder"
-        app:layout_constraintEnd_toEndOf="@+id/textViewIntensiteValeur2"
-        app:layout_constraintStart_toStartOf="@+id/editTextNumber2"
-        app:layout_constraintTop_toBottomOf="@+id/editTextNumber2" />
+        app:layout_constraintEnd_toEndOf="@+id/textViewIntensiteValeur"
+        app:layout_constraintStart_toStartOf="@+id/editTextNumber"
+        app:layout_constraintTop_toBottomOf="@+id/editTextNumber" />
 
     <Switch
-        android:id="@+id/switchNotif2"
+        android:id="@+id/switchNotif"
         android:layout_width="129dp"
         android:layout_height="47dp"
         android:text="Notifications"
-        app:layout_constraintBottom_toTopOf="@+id/titre2"
-        app:layout_constraintEnd_toStartOf="@+id/btnMinuterie2"
-        app:layout_constraintStart_toEndOf="@+id/btnServeur2"
+        app:layout_constraintBottom_toTopOf="@+id/titre"
+        app:layout_constraintEnd_toStartOf="@+id/btnMinuterie"
+        app:layout_constraintStart_toEndOf="@+id/btnServeur"
         tools:ignore="UseSwitchCompatOrMaterialXml" />
 </androidx.constraintlayout.widget.ConstraintLayout>
