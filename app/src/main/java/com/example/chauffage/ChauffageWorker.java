@@ -37,47 +37,33 @@ import java.util.Objects;
 
 
 public class ChauffageWorker extends Worker {
-    private Handler handler;
-    private Context context;
     private SharedPreferences preferences;
     String idCanal = "C1";
     CharSequence nomCanal = "Canal1";
     String descriptionCanal = "Canal de notification";
-    int niveauImportance = NotificationManager.IMPORTANCE_DEFAULT;
     public ChauffageWorker(
             @NonNull Context context,
             @NonNull WorkerParameters parameters) {
         super(context, parameters);
-        this.handler = new Handler(Looper.getMainLooper());
-        this.context = context;
         this.preferences = context.getSharedPreferences("data", Context.MODE_PRIVATE);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel canal = new NotificationChannel(idCanal, nomCanal, niveauImportance);
-            canal.setDescription(descriptionCanal);
-            NotificationManager manager = context.getSystemService(NotificationManager.class);
-            manager.createNotificationChannel(canal);
-        }
     }
 
     @NonNull
     @Override
     public Result doWork() {
 
+        // Affiche l'heure à laquelle le Worker a travaillé
         long currentTimeMillis = System.currentTimeMillis();
         Date date = new Date(currentTimeMillis);
         SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
         String time = formatter.format(date);
         Log.i("Worker", time);
-        Log.i("Shared chau do", String.valueOf(preferences.getInt("chauffage", 3)));
-        Log.i("Shared ac do", String.valueOf(preferences.getInt("ac", 3)));
-        Log.i("Shared int do", String.valueOf(preferences.getInt("intensite", 3)));
 
-
+        // Vérifie si les notifications sont activées et si les permissions sont accordées
         if (preferences.getBoolean("notifications", false)) {
             if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.POST_NOTIFICATIONS)
                     == PackageManager.PERMISSION_GRANTED) {
-                Log.i("GET", "GET");
+                // get les données actuelles du serveur
                 getData();
                 return Result.success();
             } else {
@@ -88,15 +74,14 @@ public class ChauffageWorker extends Worker {
     }
 
     private void envoyerNotification(String titre) {
-        Log.i("Notification", "début");
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Log.i("Notification", "milieu");
             NotificationManager notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
             // Créer un canal de notification
             NotificationChannel canal = new NotificationChannel(idCanal,
                     nomCanal, NotificationManager.IMPORTANCE_DEFAULT);
+            canal.setDescription(descriptionCanal);
             notificationManager.createNotificationChannel(canal);
             // Envoyer la notification
              Notification notification = new Notification.Builder(getApplicationContext(), idCanal)
@@ -105,7 +90,6 @@ public class ChauffageWorker extends Worker {
                     .setContentText("Modification des réglages du thermostate")
                     .build();
             notificationManager.notify(1, notification);
-            Log.i("Notification", "fin");
         }
     }
 
@@ -113,7 +97,7 @@ public class ChauffageWorker extends Worker {
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                Log.i("GET", "DEBUT");
+                // Obtiens la dernière valeur du ip et du port
                 String ip = preferences.getString("ip", "");
                 String port = preferences.getString("port", "");
 
@@ -124,7 +108,7 @@ public class ChauffageWorker extends Worker {
                     URL url = new URL("Http://" + ip + ":" + port + "/get");
                     HttpURLConnection connexion = (HttpURLConnection) url.openConnection();
 
-                    // Au cas ou la connection échoue ou la requète
+                    // Au cas ou la connection ou la requète échoue
                     connexion.setConnectTimeout(4000);
                     connexion.setReadTimeout(4000);
                     if (connexion.getResponseCode() >= 300) {
@@ -141,12 +125,10 @@ public class ChauffageWorker extends Worker {
                     connexion.disconnect();
                 } catch (IOException e) {
                     // Notification connexion interompue
-                    Log.i("Appel", "erreur");
                     envoyerNotification("Échec de connexion au thermostate");
                 }
 
                 // Obtenir les valeurs du Json
-                Log.i("GET", "MILIEU");
                 String text = reponse.toString();
                 List<Integer> valeurs = new ArrayList<>();
                 for (int i = 0; i < text.length(); i++) {
@@ -166,36 +148,29 @@ public class ChauffageWorker extends Worker {
                         }
                     }
                 }
-                Log.i("Shared chau", String.valueOf(preferences.getInt("chauffage", 3)));
-                Log.i("Shared ac", String.valueOf(preferences.getInt("ac", 3)));
-                Log.i("Shared int", String.valueOf(preferences.getInt("intensite", 3)));
-                // Si toutes les valeurs ont bien été trouvé
 
+                // Si toutes les valeurs ont bien été trouvé
                 String titre = "";
                 if (valeurs.size() == 3) {
+                    // Si les valeurs ont changé, enregistre les nouvelles valeurs dans les sharedprefs et envoie une notification
                     SharedPreferences.Editor editor = preferences.edit();
                     if (valeurs.get(0) != preferences.getInt("chauffage", 0)) {
                         if (Objects.equals(valeurs.get(0), valeurs.get(1))) {
-                            Log.i("Appel", "ferme");
                             titre = "Le thermostate est éteint";
                             editor.putInt("chauffage", valeurs.get(0));
                         } else if (valeurs.get(0) == 1) {
-                            Log.i("Appel", "chauffage");
                             titre = "Le chauffage est allumé à " + valeurs.get(2) + "%";
                             editor.putInt("chauffage", valeurs.get(0));
                         }
                     } else if (valeurs.get(2) != preferences.getInt("intensite", 0)) {
-                        Log.i("Appel", "intensite");
                         titre = "Le thermostate à été réglé à " + valeurs.get(2) + "%";
                         editor.putInt("intensite", valeurs.get(2));
                     }
                     if (valeurs.get(1) != preferences.getInt("ac", 0)) {
                         if (Objects.equals(valeurs.get(0), valeurs.get(1))) {
-                            Log.i("Appel", "ferme");
                             titre = "Le thermostate est éteint";
                             editor.putInt("ac", valeurs.get(1));
                         } else if (valeurs.get(1) == 1) {
-                            Log.i("Appel", "ac");
                             titre = "L'air climatisé est allumé à " + valeurs.get(2) + "%";
                             editor.putInt("ac", valeurs.get(1));
                         }
@@ -204,7 +179,6 @@ public class ChauffageWorker extends Worker {
                     if (!titre.isEmpty()) {
                         envoyerNotification(titre);
                     }
-                    Log.i("GET", "FIN");
                 }
             }
         });

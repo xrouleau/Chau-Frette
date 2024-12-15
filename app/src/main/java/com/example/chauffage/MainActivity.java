@@ -32,67 +32,91 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
-    private final String NOM_WORKER = "ChauFretteWorker";
     private Handler handler;
     private SharedPreferences preferences;
+
+    // Détermine si l'application devrait essayer de rafraichir les données ou non
     private boolean shouldRefresh = true;
+
+    // Lance la demander d'autorisation pour envoyer des notifications
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    // Si la permission est accordée démarre le worker
+                    PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(ChauffageWorker.class,
+                            PeriodicWorkRequest.MIN_PERIODIC_INTERVAL_MILLIS,
+                            TimeUnit.MILLISECONDS).build();
+                    WorkManager.getInstance(this).enqueue(request);
+                }
+            });
 
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        // donne une valeur au handler et au sharedpreferences pour qu'ils soient accessible dans toute l'activité
         this.handler = new Handler(Looper.getMainLooper());
         this.preferences = getSharedPreferences("data", MODE_PRIVATE);
 
+        // Vérifie si la permission pour les notifications est accordée
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
-            // Si la permission n'est pas accordée, demander la permission
+            // Si la permission n'est pas accordée demande la permission
             requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS);
         } else {
-            // Si la permission est déjà accordée, vous pouvez démarrer le worker
+            // Si la permission est accordée démarre le worker
             PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(ChauffageWorker.class,
                     15,
                     TimeUnit.MINUTES).build();
+            String NOM_WORKER = "ChauFretteWorker";
             WorkManager.getInstance(this).enqueueUniquePeriodicWork(NOM_WORKER, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, request);
         }
 
-
+        // Déclaration des widgets de mon activité
+        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sChauffage = findViewById(R.id.switchChauffage);
+        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sAC = findViewById(R.id.switchAC);
+        Button enregistrer = findViewById(R.id.buttonIntensite);
+        EditText editTextIntensite = findViewById(R.id.editTextNumber);
+        TextView textViewIntensite = findViewById(R.id.textViewIntensiteValeur);
         @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sNotif = findViewById(R.id.switchNotif);
+
+        // update la switch des notifications
         sNotif.setChecked(preferences.getBoolean("notifications", false));
+
+        // Méthode qui détecte et traite un click sur la switch des notifications
         sNotif.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                // Update les shared prefs
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putBoolean("notifications", sNotif.isChecked());
                 editor.apply();
             }
         });
 
-        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sChauffage = findViewById(R.id.switchChauffage);
-        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sAC = findViewById(R.id.switchAC);
-        Button enregistrer = findViewById(R.id.buttonIntensite);
-        EditText editTextIntensite = findViewById(R.id.editTextNumber);
-        TextView textViewIntensite = findViewById(R.id.textViewIntensiteValeur);
+        // Méthode qui détecte et traite un click sur la switch du chauffage
         sChauffage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                // S'assure que les switch chauffage et A/C ne sont jamais activés en même temps
                 if (sChauffage.isChecked()) {
                     sAC.setChecked(false);
                 }
+
+                // Update les shared prefs
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putInt("chauffage", sChauffage.isChecked() ? 1 : 0);
                 editor.putInt("ac", 0);
+
+                // Gère l'intensité selon certains cas
                 if (sAC.isChecked() == sChauffage.isChecked()) {
                     editor.putInt("intensite", 0);
                     textViewIntensite.setText("0");
@@ -101,20 +125,27 @@ public class MainActivity extends AppCompatActivity {
                     editor.putInt("intensite", 5);
                     textViewIntensite.setText("5");
                 }
+
+                // Applique les changement et les envoies au serveur
                 editor.apply();
                 postData();
             }
         });
 
+        // Méthode qui détecte et traite un click sur la switch de l'air climatisé
         sAC.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                // S'assure que les switch chauffage et A/C ne sont jamais activés en même temps
                 if (sAC.isChecked()) {
                     sChauffage.setChecked(false);
                 }
+                // Update les shared prefs
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putInt("ac", sAC.isChecked() ? 1 : 0);
                 editor.putInt("chauffage", 0);
+
+                // Gère l'intensité selon certains cas
                 if (sAC.isChecked() == sChauffage.isChecked()) {
                     editor.putInt("intensite", 0);
                     textViewIntensite.setText("0");
@@ -123,27 +154,28 @@ public class MainActivity extends AppCompatActivity {
                     editor.putInt("intensite", 5);
                     textViewIntensite.setText("5");
                 }
+
+                // Applique les changement et les envoies au serveur
                 editor.apply();
                 postData();
             }
         });
 
 
+        // Méthode qui détecte et traite un click sur lè boutton enregistrer
         enregistrer.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 try {
+                    // Obtention et validation de l'intensité entrée
                     int intensite = Integer.parseInt(editTextIntensite.getText().toString());
                     editTextIntensite.setText("");
                     SharedPreferences.Editor editor = preferences.edit();
                     if (intensite <= 0 || intensite > 100) {
                         throw new Exception();
-                    } else if (intensite == 0) {
-                        editor.putInt("chauffage", 0);
-                        editor.putInt("ac", 0);
-                        sAC.setChecked(false);
-                        sChauffage.setChecked(false);
                     }
+
+                    // Change l'intensité seulement si une des switch est allumée
                     if (sAC.isChecked() != sChauffage.isChecked()) {
                         editor.putInt("intensite", intensite);
                         textViewIntensite.setText(String.valueOf(intensite));
@@ -151,6 +183,8 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         Toast.makeText(getApplicationContext(), "Il faut d'abord activer un mode", Toast.LENGTH_SHORT).show();
                     }
+
+                    // Envoie les nouvelles données
                     postData();
                 } catch (NumberFormatException e) {
                     Toast.makeText(getApplicationContext(), "Doit être un nombre", Toast.LENGTH_SHORT).show();
@@ -160,42 +194,39 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Méthode qui détecte et traite un click sur lè boutton serveur
         Button serveur = findViewById(R.id.buttonServeur);
         serveur.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                // Lance l'activité serveur
                 serveurActivity();
             }
         });
     }
 
-    private final ActivityResultLauncher<String> requestPermissionLauncher =
-            registerForActivityResult(new RequestPermission(), isGranted -> {
-                if (isGranted) {
-                    // Si la permission est accordée, démarrer le worker
-                    PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(ChauffageWorker.class,
-                            PeriodicWorkRequest.MIN_PERIODIC_INTERVAL_MILLIS,
-                            TimeUnit.MILLISECONDS).build();
-                    WorkManager.getInstance(this).enqueue(request);
-                } else {
-                    // Si la permission est refusée, afficher un message
-                    Toast.makeText(this, "Permission denied. Cannot send notifications.", Toast.LENGTH_SHORT).show();
-                }
-            });
 
+    /***
+     * Fonction appelée à chaque fois que l'activité est affichée
+     */
     @Override
     protected void onResume() {
         super.onResume();
-        refresh();
+
+        // recommence le rafraichissement des données
         shouldRefresh = true;
+        refresh();
     }
 
+    /***
+     * Get les données
+     */
     private void getData () {
         Thread thread = new Thread(new Runnable() {
             @SuppressLint("UseSwitchCompatOrMaterialCode")
             @Override
             public void run() {
-
+                // Obtiens la dernière valeur du ip et du port
                 String ip = preferences.getString("ip", "");
                 String port = preferences.getString("port", "");
 
@@ -274,10 +305,14 @@ public class MainActivity extends AppCompatActivity {
         thread.start();
     }
 
+    /***
+     * Post les données
+     */
     private void postData(){
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
+                // Obtiens la dernière valeur du ip et du port
                 String ip = preferences.getString("ip", "");
                 String port = preferences.getString("port", "");
 
@@ -297,20 +332,14 @@ public class MainActivity extends AppCompatActivity {
                     connexion.setDoOutput(true);
                     connexion.setDoInput(true);
                     DataOutputStream os = new DataOutputStream(connexion.getOutputStream());
-                    Log.e("ICI", "ICI");
                     os.writeBytes("{\"chauffage\": " + preferences.getInt("chauffage", 0) + ", \"ac\": " + preferences.getInt("ac", 0) + ", \"intensite\": " + preferences.getInt("intensite", 0) + "}");
-                    Log.e("ICI", "ICI");
                     os.flush();
-                    Log.e("ICI", "ICI");
                     os.close();
-                    Log.e("ICI", "ICI");
                     if (connexion.getResponseCode() >= 300) {
-                        Log.e("ICI", String.valueOf(connexion.getResponseCode()));
-                        throw new IOException();
+                        Log.e("e", String.valueOf(connexion.getResponseCode()));
                     }
                 } catch (IOException e) {
                     // Si la connexion échoue lancer l'activité serveur
-                    Log.e("ICI", "erreur");
                     handler.post(() -> Toast.makeText(getApplicationContext(), "Connexion au serveur impossible", Toast.LENGTH_LONG).show());
                     handler.post(() -> serveurActivity());
                 }
@@ -319,6 +348,9 @@ public class MainActivity extends AppCompatActivity {
         thread.start();
     }
 
+    /***
+     * Rafraichi les données
+     */
     private void refresh() {
         Thread thread = new Thread(new Runnable() {
             @Override
@@ -326,17 +358,20 @@ public class MainActivity extends AppCompatActivity {
                 while (shouldRefresh) {
                     getData();
                     try {
+                        // Rafraichissement à toutes les 10 secondes
                         Thread.sleep(10000);
                     } catch (InterruptedException e) {
                         Log.e("ERREUR", "Thread.sleep");
                     }
                 }
-
             }
         });
         thread.start();
     }
 
+    /***
+     * Lance l'activité du serveur
+     */
     private void serveurActivity() {
         Intent intent = new Intent(MainActivity.this, ServeurActivity.class);
         startActivity(intent);
@@ -345,18 +380,21 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        // arrête le rafraichissement des données
         shouldRefresh = false;
     }
 
     @Override
     protected void onStop() {
         super.onStop();
+        // arrête le rafraichissement des données
         shouldRefresh = false;
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        // arrête le rafraichissement des données
         shouldRefresh = false;
     }
 }
