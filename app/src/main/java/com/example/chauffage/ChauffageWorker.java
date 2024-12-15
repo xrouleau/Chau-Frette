@@ -169,11 +169,6 @@ public class ChauffageWorker extends Worker {
                 Log.i("Shared chau", String.valueOf(preferences.getInt("chauffage", 3)));
                 Log.i("Shared ac", String.valueOf(preferences.getInt("ac", 3)));
                 Log.i("Shared int", String.valueOf(preferences.getInt("intensite", 3)));
-
-                Log.i("GET chau", String.valueOf(valeurs.get(0)));
-                Log.i("GET ac", String.valueOf(valeurs.get(1)));
-                Log.i("GET int", String.valueOf(valeurs.get(2)));
-
                 // Si toutes les valeurs ont bien été trouvé
 
                 String titre = "";

@@ -81,6 +81,9 @@ public class MainActivity extends AppCompatActivity {
 
         @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sChauffage = findViewById(R.id.switchChauffage);
         @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sAC = findViewById(R.id.switchAC);
+        Button enregistrer = findViewById(R.id.buttonIntensite);
+        EditText editTextIntensite = findViewById(R.id.editTextNumber);
+        TextView textViewIntensite = findViewById(R.id.textViewIntensiteValeur);
         sChauffage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -92,6 +95,11 @@ public class MainActivity extends AppCompatActivity {
                 editor.putInt("ac", 0);
                 if (sAC.isChecked() == sChauffage.isChecked()) {
                     editor.putInt("intensite", 0);
+                    textViewIntensite.setText("0");
+                }
+                if (sChauffage.isChecked() && preferences.getInt("intensite", 0) == 0) {
+                    editor.putInt("intensite", 5);
+                    textViewIntensite.setText("5");
                 }
                 editor.apply();
                 postData();
@@ -109,25 +117,36 @@ public class MainActivity extends AppCompatActivity {
                 editor.putInt("chauffage", 0);
                 if (sAC.isChecked() == sChauffage.isChecked()) {
                     editor.putInt("intensite", 0);
+                    textViewIntensite.setText("0");
+                }
+                if (sAC.isChecked() && preferences.getInt("intensite", 0) == 0) {
+                    editor.putInt("intensite", 5);
+                    textViewIntensite.setText("5");
                 }
                 editor.apply();
                 postData();
             }
         });
 
-        Button enregistrer = findViewById(R.id.buttonIntensite);
+
         enregistrer.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 try {
-                    EditText editTextIntensite = findViewById(R.id.editTextNumber);
-                    Integer intensite = Integer.valueOf(editTextIntensite.getText().toString());
-                    if (intensite < 0 || intensite > 100) {
+                    int intensite = Integer.parseInt(editTextIntensite.getText().toString());
+                    editTextIntensite.setText("");
+                    SharedPreferences.Editor editor = preferences.edit();
+                    if (intensite <= 0 || intensite > 100) {
                         throw new Exception();
+                    } else if (intensite == 0) {
+                        editor.putInt("chauffage", 0);
+                        editor.putInt("ac", 0);
+                        sAC.setChecked(false);
+                        sChauffage.setChecked(false);
                     }
                     if (sAC.isChecked() != sChauffage.isChecked()) {
-                        SharedPreferences.Editor editor = preferences.edit();
-                        editor.putInt("chauffage", 0);
+                        editor.putInt("intensite", intensite);
+                        textViewIntensite.setText(String.valueOf(intensite));
                         editor.apply();
                     } else {
                         Toast.makeText(getApplicationContext(), "Il faut d'abord activer un mode", Toast.LENGTH_SHORT).show();
@@ -136,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
                 } catch (NumberFormatException e) {
                     Toast.makeText(getApplicationContext(), "Doit être un nombre", Toast.LENGTH_SHORT).show();
                 } catch (Exception e) {
-                    Toast.makeText(getApplicationContext(), "Doit être entre 0 et 100 inclusivement", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Doit être entre 1 et 100 inclusivement", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -268,11 +287,8 @@ public class MainActivity extends AppCompatActivity {
                     HttpURLConnection connexion = (HttpURLConnection) url.openConnection();
 
                     // Au cas ou la connection échoue ou la requète
-                    connexion.setConnectTimeout(2000);
-                    connexion.setReadTimeout(2000);
-                    if (connexion.getResponseCode() >= 300) {
-                        throw new IOException();
-                    }
+                    connexion.setConnectTimeout(4000);
+                    connexion.setReadTimeout(4000);
 
                     // Si la connexion réussi envoyer la requête
                     connexion.setRequestMethod("POST");
@@ -281,11 +297,20 @@ public class MainActivity extends AppCompatActivity {
                     connexion.setDoOutput(true);
                     connexion.setDoInput(true);
                     DataOutputStream os = new DataOutputStream(connexion.getOutputStream());
+                    Log.e("ICI", "ICI");
                     os.writeBytes("{\"chauffage\": " + preferences.getInt("chauffage", 0) + ", \"ac\": " + preferences.getInt("ac", 0) + ", \"intensite\": " + preferences.getInt("intensite", 0) + "}");
+                    Log.e("ICI", "ICI");
                     os.flush();
+                    Log.e("ICI", "ICI");
                     os.close();
+                    Log.e("ICI", "ICI");
+                    if (connexion.getResponseCode() >= 300) {
+                        Log.e("ICI", String.valueOf(connexion.getResponseCode()));
+                        throw new IOException();
+                    }
                 } catch (IOException e) {
                     // Si la connexion échoue lancer l'activité serveur
+                    Log.e("ICI", "erreur");
                     handler.post(() -> Toast.makeText(getApplicationContext(), "Connexion au serveur impossible", Toast.LENGTH_LONG).show());
                     handler.post(() -> serveurActivity());
                 }
@@ -300,7 +325,6 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 while (shouldRefresh) {
                     getData();
-                    Log.i("Refresh", "aaaaaaaaaaaaaaa");
                     try {
                         Thread.sleep(10000);
                     } catch (InterruptedException e) {
