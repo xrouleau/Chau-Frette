@@ -51,7 +51,7 @@ public class ChauffageWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
-
+        Log.i("AAAAAAAAAAAAAAA", "Methode doWork");
         // Affiche l'heure à laquelle le Worker a travaillé
         long currentTimeMillis = System.currentTimeMillis();
         Date date = new Date(currentTimeMillis);
@@ -65,16 +65,20 @@ public class ChauffageWorker extends Worker {
                     == PackageManager.PERMISSION_GRANTED) {
                 // get les données actuelles du serveur
                 getData();
+                Log.i("AAAAAAAAAAAAAAA", "work reussi");
                 return Result.success();
             } else {
+                Log.i("AAAAAAAAAAAAAAA", "work rate");
                 return Result.failure();
             }
         }
+        Log.i("AAAAAAAAAAAAAAA", "work rate");
+
         return Result.failure();
     }
 
     private void envoyerNotification(String titre) {
-
+        Log.i("AAAAAAAAAAAAAAA", "envoyer notification");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
@@ -84,7 +88,7 @@ public class ChauffageWorker extends Worker {
             canal.setDescription(descriptionCanal);
             notificationManager.createNotificationChannel(canal);
             // Envoyer la notification
-             Notification notification = new Notification.Builder(getApplicationContext(), idCanal)
+            Notification notification = new Notification.Builder(getApplicationContext(), idCanal)
                     .setSmallIcon(android.R.drawable.star_on)
                     .setContentTitle(titre)
                     .setContentText("Modification des réglages du thermostate")
@@ -94,6 +98,7 @@ public class ChauffageWorker extends Worker {
     }
 
     private void getData() {
+        Log.i("AAAAAAAAAAAAAAA", "work get");
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {

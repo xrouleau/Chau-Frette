@@ -38,7 +38,7 @@ public class ServeurActivity extends AppCompatActivity {
                 SharedPreferences preferences = getSharedPreferences("data", MODE_PRIVATE);
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putString("ip", ETIp.getText().toString());
-                editor.putString("Port", ETPort.getText().toString());
+                editor.putString("port", ETPort.getText().toString());
                 editor.apply();
                 mainActivity();
             }

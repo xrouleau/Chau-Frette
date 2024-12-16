@@ -37,21 +37,30 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
+    private final String NOM_WORKER = "ChauFretteWorker";
     private Handler handler;
     private SharedPreferences preferences;
-
     // Détermine si l'application devrait essayer de rafraichir les données ou non
     private boolean shouldRefresh = true;
 
     // Lance la demander d'autorisation pour envoyer des notifications
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new RequestPermission(), isGranted -> {
+                Log.i("AAAAAAAAAAAAAAA", "Demande permission");
                 if (isGranted) {
                     // Si la permission est accordée démarre le worker
                     PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(ChauffageWorker.class,
                             PeriodicWorkRequest.MIN_PERIODIC_INTERVAL_MILLIS,
                             TimeUnit.MILLISECONDS).build();
                     WorkManager.getInstance(this).enqueue(request);
+                } else {
+                    // Sinon avertissement
+                    Toast.makeText(this, "Veuillez autoriser les notifications", Toast.LENGTH_LONG).show();
+                    @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sNotif = findViewById(R.id.switchNotif);
+                    sNotif.setChecked(false);
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putBoolean("notifications", sNotif.isChecked());
+                    editor.apply();
                 }
             });
 
@@ -72,21 +81,21 @@ public class MainActivity extends AppCompatActivity {
             // Si la permission n'est pas accordée demande la permission
             requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS);
         } else {
-            // Si la permission est accordée démarre le worker
+            // Si la permission est déjà accordée démarre le worker
             PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(ChauffageWorker.class,
                     15,
                     TimeUnit.MINUTES).build();
-            String NOM_WORKER = "ChauFretteWorker";
             WorkManager.getInstance(this).enqueueUniquePeriodicWork(NOM_WORKER, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, request);
         }
 
         // Déclaration des widgets de mon activité
         @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sChauffage = findViewById(R.id.switchChauffage);
         @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sAC = findViewById(R.id.switchAC);
+        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sNotif = findViewById(R.id.switchNotif);
         Button enregistrer = findViewById(R.id.buttonIntensite);
         EditText editTextIntensite = findViewById(R.id.editTextNumber);
         TextView textViewIntensite = findViewById(R.id.textViewIntensiteValeur);
-        @SuppressLint("UseSwitchCompatOrMaterialCode") Switch sNotif = findViewById(R.id.switchNotif);
+        Button serveur = findViewById(R.id.buttonServeur);
 
         // update la switch des notifications
         sNotif.setChecked(preferences.getBoolean("notifications", false));
@@ -99,6 +108,19 @@ public class MainActivity extends AppCompatActivity {
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putBoolean("notifications", sNotif.isChecked());
                 editor.apply();
+                if (sNotif.isChecked()) {
+                    if (ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.POST_NOTIFICATIONS)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        // Si la permission n'est pas accordée, demander la permission
+                        requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS);
+                    } else {
+                        // Si la permission est déjà accordée, vous pouvez démarrer le worker
+                        PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(ChauffageWorker.class,
+                                15,
+                                TimeUnit.MINUTES).build();
+                        WorkManager.getInstance(MainActivity.this).enqueueUniquePeriodicWork(NOM_WORKER, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, request);
+                    }
+                }
             }
         });
 
@@ -140,6 +162,7 @@ public class MainActivity extends AppCompatActivity {
                 if (sAC.isChecked()) {
                     sChauffage.setChecked(false);
                 }
+
                 // Update les shared prefs
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putInt("ac", sAC.isChecked() ? 1 : 0);
@@ -161,7 +184,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
         // Méthode qui détecte et traite un click sur lè boutton enregistrer
         enregistrer.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -173,6 +195,11 @@ public class MainActivity extends AppCompatActivity {
                     SharedPreferences.Editor editor = preferences.edit();
                     if (intensite <= 0 || intensite > 100) {
                         throw new Exception();
+                    } else if (intensite == 0) {
+                        editor.putInt("chauffage", 0);
+                        editor.putInt("ac", 0);
+                        sAC.setChecked(false);
+                        sChauffage.setChecked(false);
                     }
 
                     // Change l'intensité seulement si une des switch est allumée
@@ -195,7 +222,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Méthode qui détecte et traite un click sur lè boutton serveur
-        Button serveur = findViewById(R.id.buttonServeur);
         serveur.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -205,17 +231,14 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-
     /***
      * Fonction appelée à chaque fois que l'activité est affichée
      */
     @Override
     protected void onResume() {
         super.onResume();
-
-        // recommence le rafraichissement des données
-        shouldRefresh = true;
         refresh();
+        shouldRefresh = true;
     }
 
     /***
@@ -336,7 +359,7 @@ public class MainActivity extends AppCompatActivity {
                     os.flush();
                     os.close();
                     if (connexion.getResponseCode() >= 300) {
-                        Log.e("e", String.valueOf(connexion.getResponseCode()));
+                        throw new IOException();
                     }
                 } catch (IOException e) {
                     // Si la connexion échoue lancer l'activité serveur
@@ -364,6 +387,7 @@ public class MainActivity extends AppCompatActivity {
                         Log.e("ERREUR", "Thread.sleep");
                     }
                 }
+
             }
         });
         thread.start();
@@ -374,6 +398,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private void serveurActivity() {
         Intent intent = new Intent(MainActivity.this, ServeurActivity.class);
+
         startActivity(intent);
     }
 
